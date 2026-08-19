@@ -8,13 +8,17 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Ícones do Lucide -->
   <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Preload da 1ª imagem do Hero (evita "flash" no carregamento) -->
+  <link rel="preload" as="image" href="pexels-mikhail-nilov-9242903.webp">
+
   <style>
     :root {
       --navy-dark: #0A1E3F; /* Azul escuro principal */
       --navy-light: #122B55; /* Azul intermediário para cards */
       --blue-cta: #007BFF; /* Azul vibrante dos botões */
     }
-    
+
     body {
       background-color: #FFFFFF;
       font-family: system-ui, -apple-system, sans-serif;
@@ -25,7 +29,7 @@
     .text-navy-dark { color: var(--navy-dark); }
     .bg-blue-cta { background-color: var(--blue-cta); }
     .text-blue-cta { color: var(--blue-cta); }
-    
+
     .btn-cta {
       background-color: var(--blue-cta);
       color: white;
@@ -62,29 +66,183 @@
       margin-bottom: 0.5rem;
     }
 
+    /* Salto de destaque dos indicadores */
+    @keyframes stat-pop {
+      0%   { transform: scale(1); }
+      45%  { transform: scale(1.18); }
+      70%  { transform: scale(0.96); }
+      100% { transform: scale(1); }
+    }
+    .stat-pop {
+      animation: stat-pop 520ms cubic-bezier(.34, 1.56, .64, 1);
+      transform-origin: left center;
+    }
+/* Carrossel de depoimentos */
+    .depo-card {
+      display: none;
+      flex: 1 1 0;
+      min-width: 0;
+      background-color: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-radius: 0.75rem;
+      padding: 2rem;
+      transition: transform 350ms ease, box-shadow 350ms ease, background-color 350ms ease, border-color 350ms ease;
+    }
+    .depo-card.is-visivel {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .depo-card.is-destaque {
+      background-color: #FFFFFF;
+      transform: scale(1.06);
+      box-shadow: 0 24px 50px -12px rgba(10, 30, 63, 0.25);
+      border-color: rgba(0, 123, 255, 0.35);
+      z-index: 2;
+    }
+    /* No celular mostra só o card em destaque, sem ampliação */
+    @media (max-width: 767px) {
+      .depo-card.is-visivel { display: none; }
+      .depo-card.is-destaque { display: flex; transform: none; }
+    }
+
     /* Balão do WhatsApp */
     .wa-tooltip {
       transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    /* =========================================================
+       CURVAS DE SEPARAÇÃO (estilo Visagio)
+       Raio ELÍPTICO: largo na horizontal, baixo na vertical
+       => curva longa e suave, em vez de um "quarto de círculo".
+       ========================================================= */
+    .curve-br {
+      border-bottom-right-radius: clamp(120px, 24vw, 420px) clamp(60px, 9vw, 170px);
+    }
+    .curve-bl {
+      border-bottom-left-radius: clamp(120px, 24vw, 420px) clamp(60px, 9vw, 170px);
+    }
+
+    /* =========================================================
+       HERO — slideshow: crossfade por SOBREPOSIÇÃO + Ken Burns
+       Estrutura: .hero-slide (controla só a OPACIDADE)
+                  └ .hero-slide__img (controla só o ZOOM)
+       Separar as duas camadas é o que impede o "trava/salto":
+       o zoom nunca é interrompido pela troca de opacidade.
+       ========================================================= */
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      background-color: var(--navy-dark); /* fallback antes de carregar */
+    }
+
+    .hero-slide {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      opacity: 0;
+      /* fade lento; 'linear' evita o "escurecido" no meio da troca */
+      transition: opacity 2200ms linear;
+      will-change: opacity;
+    }
+    .hero-slide.is-active { opacity: 1; }
+
+    .hero-slide__img {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      transform: scale(1.05) translateZ(0);
+      will-change: transform;
+      backface-visibility: hidden;
+    }
+
+    /* Zoom lento e contínuo (24s, linear = sem aceleração perceptível).
+       Como cada foto fica ~10s na tela, a animação NUNCA termina
+       => nunca há salto de volta ao tamanho original. */
+    .hero-slide__img.is-zooming {
+      animation: kenburns-in 24s linear forwards;
+    }
+    /* Slides pares fazem o movimento inverso, para não ficar repetitivo */
+    .hero-slide:nth-child(even) .hero-slide__img.is-zooming {
+      animation-name: kenburns-out;
+    }
+
+    @keyframes kenburns-in {
+      from { transform: scale(1.05) translate3d(0, 0, 0); }
+      to   { transform: scale(1.32) translate3d(-2%, -2%, 0); }
+    }
+    @keyframes kenburns-out {
+      from { transform: scale(1.32) translate3d(2%, 1.5%, 0); }
+      to   { transform: scale(1.05) translate3d(0, 0, 0); }
+    }
+
+    /* Shade (véu azul) por cima das fotos */
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      background:
+        linear-gradient(to right,
+          rgba(10, 30, 63, 0.96) 0%,
+          rgba(10, 30, 63, 0.88) 35%,
+          rgba(10, 30, 63, 0.55) 68%,
+          rgba(10, 30, 63, 0.40) 100%),
+        linear-gradient(to bottom,
+          rgba(10, 30, 63, 0.85) 0%,
+          rgba(10, 30, 63, 0.20) 38%,
+          rgba(10, 30, 63, 0.45) 78%,
+          rgba(10, 30, 63, 0.80) 100%);
+    }
+
+    @media (max-width: 1023px) {
+      .hero-overlay {
+        background:
+          linear-gradient(to bottom,
+            rgba(10, 30, 63, 0.90) 0%,
+            rgba(10, 30, 63, 0.70) 40%,
+            rgba(10, 30, 63, 0.88) 100%);
+      }
+    }
+
+    /* Shade do navbar */
+    .nav-shade {
+      background: linear-gradient(to bottom,
+        rgba(5, 16, 35, 0.85) 0%,
+        rgba(5, 16, 35, 0.45) 45%,
+        rgba(5, 16, 35, 0.00) 100%);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+
+    /* Acessibilidade: sem movimento para quem pediu menos animação */
+    @media (prefers-reduced-motion: reduce) {
+      .hero-slide__img.is-zooming { animation: none !important; }
+      .hero-slide { transition: opacity 400ms linear; }
     }
   </style>
 </head>
 <body class="text-gray-800 antialiased selection:bg-blue-cta selection:text-white bg-gray-50">
 
-  <!-- NAVBAR VISAGIO STYLE (Transparente integrada ao Hero) -->
-  <nav class="absolute top-0 w-full z-50 px-6 py-6 bg-gradient-to-b from-[#0A1E3F] to-transparent">
+  <!-- NAVBAR (Transparente com shade sobre o Hero) -->
+  <nav class="absolute top-0 w-full z-50 px-6 py-6 nav-shade">
     <div class="max-w-7xl mx-auto flex items-center justify-between w-full">
-      
-      <!-- Logo Aumentada -->
+
+      <!-- Logo (arquivo branco: SEM filtro de inversão) -->
       <a href="#" class="flex items-center shrink-0">
-        <img src="logoEESC.png" alt="Logo EESC jr." class="h-20 w-auto filter brightness-0 invert">
+        <img src="logoEESC.png" alt="EESC jr." class="h-20 w-auto">
       </a>
 
-      <!-- Links (Movidos mais para a direita) -->
+      <!-- Links -->
       <div class="hidden md:flex flex-1 justify-end items-center space-x-10 pr-12">
-        <a href="#quem-somos" class="flex items-center text-[13px] font-bold text-white hover:text-gray-300 transition-colors uppercase tracking-widest">
+        <a href="https://eescjr.com.br/quem-somos/" target="_blank" rel="noopener" class="flex items-center text-[13px] font-bold text-white hover:text-gray-300 transition-colors uppercase tracking-widest">
           Quem Somos <i data-lucide="chevron-down" class="w-4 h-4 ml-1"></i>
         </a>
-        <a href="#solucoes" class="flex items-center text-[13px] font-bold text-white hover:text-gray-300 transition-colors uppercase tracking-widest">
+        <a href="https://eescjr.com.br/sistemas-embarcados/" target="_blank" rel="noopener" class="flex items-center text-[13px] font-bold text-white hover:text-gray-300 transition-colors uppercase tracking-widest">
           Soluções <i data-lucide="chevron-down" class="w-4 h-4 ml-1"></i>
         </a>
         <a href="#footer-contato" id="link-contato" class="text-[13px] font-bold text-white hover:text-gray-300 transition-colors uppercase tracking-widest">
@@ -102,18 +260,30 @@
     </div>
   </nav>
 
-  <!-- 1. HERO SECTION (Com shade azul escuro e canto arredondado Visagio) -->
-  <section id="quem-somos" class="relative pt-40 pb-48 px-6 bg-navy-dark bg-cover bg-center rounded-br-[5rem] lg:rounded-br-[10rem] overflow-hidden" 
-           style="background-image: linear-gradient(to bottom, rgba(10, 30, 63, 0.95) 0%, rgba(10, 30, 63, 0.6) 25%, rgba(10, 30, 63, 0.85) 100%), url('imagem1');">
-    <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-start relative z-10">
-      
+  <!-- 1. HERO SECTION (slideshow de fundo + shade + curva suave) -->
+  <section id="quem-somos" class="relative pt-40 pb-48 px-6 bg-navy-dark curve-br overflow-hidden">
+
+    <!-- Camada de imagens de fundo -->
+    <div class="hero-bg" aria-hidden="true">
+      <div class="hero-slide"><div class="hero-slide__img" style="background-image: url('pexels-mikhail-nilov-9242903.webp');"></div></div>
+      <div class="hero-slide"><div class="hero-slide__img" style="background-image: url('pexels-willquezada-904402-11679115.webp');"></div></div>
+      <div class="hero-slide"><div class="hero-slide__img" style="background-image: url('pexels-thisisengineering-19895784.webp');"></div></div>
+      <div class="hero-slide"><div class="hero-slide__img" style="background-image: url('pexels-cottonbro-4709369.webp');"></div></div>
+      <div class="hero-slide"><div class="hero-slide__img" style="background-image: url('pexels-djenz-van-eysendeyk-1836927628-28675583.webp');"></div></div>
+    </div>
+
+    <!-- Véu azul escuro por cima das fotos -->
+    <div class="hero-overlay" aria-hidden="true"></div>
+
+    <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-start relative z-20">
+
       <!-- Texto Hero -->
       <div class="pt-10">
-        <h1 class="text-4xl md:text-5xl lg:text-5xl font-black text-white leading-tight mb-6">
-          Engenharia de Sistemas Embarcados para soluções de alto desempenho e confiabilidade.
+        <h1 class="text-4xl md:text-5xl lg:text-5xl font-black text-white leading-tight mb-6 drop-shadow-sm">
+          Equipamentos de Monitoramento sob medida para a sua operação.
         </h1>
-        <p class="text-lg text-gray-300 leading-relaxed mb-8">
-          Desenvolvemos arquiteturas eletrônicas dedicadas, abrangendo design de hardware, programação de firmware e integração de sensores. Entregamos projetos rigorosamente documentados, validados por prototipagem e otimizados para manufatura (DFM).
+        <p class="text-lg text-gray-200 leading-relaxed mb-8">
+          Desenvolvemos <span class="text-blue-cta font-bold">Sistemas Embarcados</span> de monitoramento e avisos para empresas, do esquemático ao protótipo validado. Fazemos projetos focados para <strong>empresas</strong>, <strong>parcerias</strong> e também <strong>desenvolvimento de produto</strong>, entregando hardware, firmware e documentação técnica completa.
         </p>
         <a href="#formulario-final" class="inline-flex items-center space-x-2 px-8 py-4 btn-cta rounded-md">
           <span>Agendar Diagnóstico Técnico</span>
@@ -124,39 +294,39 @@
     </div>
   </section>
 
-  <!-- SEÇÃO SOBREPOSTA: TEXTO + FORM CURTO -->
+  <!-- SEÇÃO SOBREPOSTA: TEXTO + FORM CURTO (posição preservada) -->
   <section class="relative z-20 max-w-7xl mx-auto px-6 -mt-32 mb-24">
     <div class="grid lg:grid-cols-2 gap-12 items-center">
-      
+
       <!-- Texto Lateral -->
       <div class="pt-40 lg:pt-0 pr-8">
         <h2 class="text-3xl md:text-4xl font-black text-navy-dark mb-4 leading-tight">
-          Solicite uma avaliação técnica de viabilidade para o seu projeto.
+          Solicite uma avaliação técnica de viabilidade para o seu equipamento.
         </h2>
         <p class="text-navy-light text-lg mb-8 font-medium">
-          Conte com engenharia especializada desde a concepção do esquemático até a validação funcional do protótipo final.
+          Conte com engenharia especializada de alto rigor técnico e acadêmico de apoio da <strong>Universidade de São Paulo (USP)</strong>, desde a concepção do esquemático até a validação funcional do protótipo final.
         </p>
       </div>
 
       <!-- Formulário Curto no Topo -->
       <div class="bg-navy-light p-8 md:p-10 rounded-xl shadow-2xl border border-white/10">
         <h3 class="text-2xl font-bold text-white mb-6 text-center">Preencha o formulário</h3>
-        <form action="#formulario-final" class="space-y-5">
+        <form id="form-topo-embarcados" action="https://lps.eescjr.com.br/confirmacao-contato/" method="POST" class="space-y-5">
           <div>
             <label class="form-label-dark">Nome Completo</label>
-            <input type="text" class="form-input-dark" placeholder="Insira seu nome completo" required>
+            <input type="text" name="nome" class="form-input-dark" placeholder="Insira seu nome completo" required>
           </div>
           <div>
             <label class="form-label-dark">E-mail Corporativo</label>
-            <input type="email" class="form-input-dark" placeholder="Insira seu e-mail corporativo" required>
+            <input type="email" name="email" class="form-input-dark" placeholder="Insira seu e-mail corporativo" required>
           </div>
           <div>
             <label class="form-label-dark">WhatsApp</label>
-            <input type="tel" class="form-input-dark" placeholder="(XX) 99999-9999" required>
+            <input type="tel" name="whatsapp" class="form-input-dark" placeholder="(XX) 99999-9999" required>
           </div>
           <div>
-            <label class="form-label-dark">Escopo Preliminar do Projeto</label>
-            <textarea rows="4" class="form-input-dark" placeholder="Descreva os requisitos técnicos preliminares, funcionalidades desejadas e restrições de hardware/software..."></textarea>
+            <label class="form-label-dark">Como podemos ajudar?</label>
+            <textarea rows="4" name="mensagem" class="form-input-dark" placeholder="Tem algo que queira nos contar sobre o seu projeto?"></textarea>
           </div>
           <button type="submit" class="w-full py-4 btn-cta rounded-md mt-4">
             Agendar Meu Diagnóstico
@@ -167,95 +337,123 @@
     </div>
   </section>
 
-  <!-- 2. PROBLEMA & SOLUÇÃO COM IMAGEM (Arredondamento retirado) -->
+  <!-- 2. CASE DE SUCESSO: TERMÔMETRO INTELIGENTE -->
   <section class="bg-navy-dark text-white py-24 overflow-hidden">
     <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
-      
-      <div class="relative">
-        <div class="absolute inset-0 bg-blue-cta/20 transform translate-x-4 translate-y-4 rounded-3xl -z-10"></div>
-        <img src="imagem2" alt="Equipe EESC jr. trabalhando em projeto" class="w-full h-[500px] object-cover rounded-3xl shadow-2xl border border-white/10 bg-gray-800" />
+
+      <div class="relative overflow-hidden rounded-[2.5rem] shadow-2xl h-[320px] md:h-[420px] lg:h-[520px]">
+        <img src="case-termometro.webp" alt="Termômetro inteligente desenvolvido pela EESC jr. instalado em freezer de laboratório" class="w-full h-full object-cover object-center block scale-[1.25]" />
       </div>
 
       <div>
-        <h2 class="text-3xl md:text-4xl font-black mb-6 leading-tight">Desafios na transição de conceito para produto eletrônico validado?</h2>
+
+        <h2 class="text-3xl md:text-4xl font-black mb-6 leading-tight">Conheça um dos nossos cases de sucesso: Termômetro Inteligente</h2>
+
         <p class="text-gray-300 mb-6 leading-relaxed">
-          A viabilidade de soluções de automação e sensoriamento exige rigor no desenvolvimento eletrônico. Os principais gargalos técnicos concentram-se no dimensionamento de hardware, estabilidade de firmware e integração sistêmica.
+          Freezers e câmaras frias falham em silêncio. A checagem manual não enxerga a variação que acontece entre uma medição e outra — e quando alguém percebe, as amostras já se perderam.
         </p>
-        <p class="text-gray-300 font-bold mb-10">
-          A EESC jr. aplica metodologias de engenharia em todas as fases do ciclo de desenvolvimento, convertendo requisitos complexos em arquiteturas robustas e funcionais.
+        <p class="text-gray-300 font-bold mb-8">
+          A EESC jr. projetou do zero um termômetro inteligente para <strong>Esalq USP</strong> que mede a temperatura 24 horas por dia e <span class="text-[#4DA3FF]">dispara alerta no celular no instante em que algo sai do padrão</span>. Hardware, firmware e comunicação desenvolvidos por nós.
         </p>
-        
+
+        <div class="grid grid-cols-2 gap-3 mb-10">
+          <div class="flex items-center space-x-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+            <i data-lucide="thermometer" class="w-4 h-4 text-[#4DA3FF] shrink-0"></i><span class="text-sm text-gray-200">Medição contínua 24/7</span>
+          </div>
+          <div class="flex items-center space-x-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+            <i data-lucide="bell-ring" class="w-4 h-4 text-[#4DA3FF] shrink-0"></i><span class="text-sm text-gray-200">Alerta instantâneo no celular</span>
+          </div>
+          <div class="flex items-center space-x-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+            <i data-lucide="battery-charging" class="w-4 h-4 text-[#4DA3FF] shrink-0"></i><span class="text-sm text-gray-200">Bateria de backup integrada</span>
+          </div>
+          <div class="flex items-center space-x-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+            <i data-lucide="wallet" class="w-4 h-4 text-[#4DA3FF] shrink-0"></i><span class="text-sm text-gray-200">Sem mensalidades</span>
+          </div>
+        </div>
+
+        <p class="text-gray-400 text-sm mb-10 leading-relaxed">
+          Instalação magnética, conexão Wi-Fi em minutos, sem obras. <strong class="text-white">O mesmo processo de engenharia que gerou esse equipamento está disponível para o desafio da sua operação.</strong>
+        </p>
+
         <!-- Stats -->
         <div class="grid grid-cols-3 gap-6 border-t border-white/20 pt-8">
           <div>
-            <div class="text-3xl font-black text-white mb-1">100%</div>
+            <div class="text-3xl font-black text-white mb-1" data-stat data-countup="100" data-suffix="%">100%</div>
             <div class="text-sm text-gray-400">Projetos Personalizados</div>
           </div>
+          <!-- NOTA: substituir por métrica oficial do núcleo quando houver -->
           <div>
-            <div class="text-3xl font-black text-white mb-1">+0M</div>
-            <div class="text-sm text-gray-400">Faturamento investido em educação</div>
+            <div class="text-3xl font-black text-white mb-1" data-stat>+ 3M</div>
+            <div class="text-sm text-gray-400">Faturamento acumulado e reenvestido em educação</div>
           </div>
           <div>
-            <div class="text-3xl font-black text-white mb-1">+10</div>
+            <div class="text-3xl font-black text-white mb-1" data-stat data-countup="250" data-prefix="+">+250</div>
             <div class="text-sm text-gray-400">Projetos Realizados</div>
           </div>
         </div>
       </div>
-      
+
     </div>
   </section>
 
-  <!-- CARDS DE SERVIÇOS -->
-  <section id="solucoes" class="py-24 px-6 bg-white rounded-bl-[5rem] lg:rounded-bl-[10rem] shadow-sm">
+  <!-- ETAPAS DO PROJETO -->
+  <section id="processo" class="py-24 px-6 bg-white curve-bl shadow-sm">
     <div class="max-w-7xl mx-auto">
       <div class="text-center mb-16 max-w-3xl mx-auto">
-        <h2 class="text-3xl md:text-4xl font-black text-navy-dark mb-4 leading-tight">Aplicações e Impacto da Engenharia de Sistemas Embarcados</h2>
+        <p class="text-blue-cta text-xs font-bold uppercase tracking-widest mb-4">Como trabalhamos</p>
+        <h2 class="text-3xl md:text-4xl font-black text-navy-dark mb-4 leading-tight">As seis etapas de um projeto de Sistemas Embarcados</h2>
         <p class="text-gray-600 font-medium leading-relaxed">
-          A integração de sistemas embarcados permite o controle preciso, a coleta de dados em tempo real e a automação de processos complexos. <strong>A EESC jr. projeta soluções eletrônicas otimizadas para atender aos rigorosos requisitos operacionais do seu setor.</strong>
+          Todo equipamento de monitoramento e avisos que desenvolvemos percorre o mesmo caminho estruturado. <strong>Você sabe exatamente em que fase o projeto está, o que já foi validado e o que será entregue ao final de cada etapa.</strong>
         </p>
       </div>
 
       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <!-- Serviço 1 -->
+        <!-- Etapa 1 -->
+        <div class="bg-navy-light p-10 rounded-2xl hover:bg-navy-dark transition-all duration-300 shadow-lg hover:-translate-y-2 hover:shadow-2xl border border-transparent hover:border-white/10">
+          <i data-lucide="clipboard-list" class="w-8 h-8 text-white mb-6 stroke-[1.5]"></i>
+          <p class="text-blue-cta text-xs font-bold uppercase tracking-widest mb-2">Etapa 01</p>
+          <h3 class="text-xl font-bold text-white mb-3">Levantamento de Requisitos</h3>
+          <p class="text-gray-300 text-sm leading-relaxed">Definimos junto à sua equipe o que precisa ser monitorado, quais avisos o sistema deve emitir e as restrições de ambiente, custo e prazo. Fecha com o escopo técnico e a análise de viabilidade.</p>
+        </div>
+
+        <!-- Etapa 2 -->
         <div class="bg-navy-light p-10 rounded-2xl hover:bg-navy-dark transition-all duration-300 shadow-lg hover:-translate-y-2 hover:shadow-2xl border border-transparent hover:border-white/10">
           <i data-lucide="cpu" class="w-8 h-8 text-white mb-6 stroke-[1.5]"></i>
+          <p class="text-blue-cta text-xs font-bold uppercase tracking-widest mb-2">Etapa 02</p>
           <h3 class="text-xl font-bold text-white mb-3">Projeto Eletrônico (Hardware)</h3>
-          <p class="text-gray-300 text-sm leading-relaxed">Dimensionamento e design de circuitos eletrônicos dedicados, garantindo integridade de sinal e adequação às normas técnicas para dispositivos industriais e comerciais.</p>
+          <p class="text-gray-300 text-sm leading-relaxed">Dimensionamento e desenho do circuito dedicado ao seu equipamento: esquemático, seleção de componentes, layout e roteamento de PCB com integridade de sinal garantida.</p>
         </div>
 
-        <!-- Serviço 2 -->
+        <!-- Etapa 3 -->
         <div class="bg-navy-light p-10 rounded-2xl hover:bg-navy-dark transition-all duration-300 shadow-lg hover:-translate-y-2 hover:shadow-2xl border border-transparent hover:border-white/10">
           <i data-lucide="code-2" class="w-8 h-8 text-white mb-6 stroke-[1.5]"></i>
-          <h3 class="text-xl font-bold text-white mb-3">Firmware Especializado</h3>
-          <p class="text-gray-300 text-sm leading-relaxed">Desenvolvimento de código embarcado (Bare-metal e RTOS) para microcontroladores, focado em otimização de recursos, determinismo e confiabilidade sistêmica.</p>
+          <p class="text-blue-cta text-xs font-bold uppercase tracking-widest mb-2">Etapa 03</p>
+          <h3 class="text-xl font-bold text-white mb-3">Desenvolvimento de Firmware</h3>
+          <p class="text-gray-300 text-sm leading-relaxed">Código embarcado (Bare-metal e RTOS) escrito para o hardware do seu equipamento, com foco em otimização de recursos, consumo controlado e confiabilidade em operação contínua.</p>
         </div>
 
-        <!-- Serviço 3 -->
+        <!-- Etapa 4 -->
         <div class="bg-navy-light p-10 rounded-2xl hover:bg-navy-dark transition-all duration-300 shadow-lg hover:-translate-y-2 hover:shadow-2xl border border-transparent hover:border-white/10">
           <i data-lucide="layers" class="w-8 h-8 text-white mb-6 stroke-[1.5]"></i>
-          <h3 class="text-xl font-bold text-white mb-3">Integração Sistêmica</h3>
-          <p class="text-gray-300 text-sm leading-relaxed">Sincronização entre hardware, sensores e atuadores, garantindo compatibilidade elétrica, condicionamento de sinais e mitigação de ruídos eletromagnéticos.</p>
+          <p class="text-blue-cta text-xs font-bold uppercase tracking-widest mb-2">Etapa 04</p>
+          <h3 class="text-xl font-bold text-white mb-3">Integração de Sensores</h3>
+          <p class="text-gray-300 text-sm leading-relaxed">Sincronização entre placa, sensores e sinalizadores: compatibilidade elétrica, condicionamento de sinais e mitigação de ruídos eletromagnéticos para leituras confiáveis em campo.</p>
         </div>
 
-        <!-- Serviço 4 -->
+        <!-- Etapa 5 -->
         <div class="bg-navy-light p-10 rounded-2xl hover:bg-navy-dark transition-all duration-300 shadow-lg hover:-translate-y-2 hover:shadow-2xl border border-transparent hover:border-white/10">
-          <i data-lucide="wifi" class="w-8 h-8 text-white mb-6 stroke-[1.5]"></i>
-          <h3 class="text-xl font-bold text-white mb-3">Conectividade IoT</h3>
-          <p class="text-gray-300 text-sm leading-relaxed">Implementação de conectividade e protocolos de comunicação (MQTT, HTTP, LoRaWAN) para telemetria, assegurando integridade e latência controlada na transmissão de dados.</p>
+          <i data-lucide="radio" class="w-8 h-8 text-white mb-6 stroke-[1.5]"></i>
+          <p class="text-blue-cta text-xs font-bold uppercase tracking-widest mb-2">Etapa 05</p>
+          <h3 class="text-xl font-bold text-white mb-3">Conectividade e Comunicação</h3>
+          <p class="text-gray-300 text-sm leading-relaxed">Configuramos de forma personalizada a banda e os pacotes de comunicação do equipamento, integrando-o a sistemas já consolidados no mercado e a novas tecnologias, em redes IP ou Non-IP.</p>
         </div>
 
-        <!-- Serviço 5 -->
+        <!-- Etapa 6 -->
         <div class="bg-navy-light p-10 rounded-2xl hover:bg-navy-dark transition-all duration-300 shadow-lg hover:-translate-y-2 hover:shadow-2xl border border-transparent hover:border-white/10">
-          <i data-lucide="database" class="w-8 h-8 text-white mb-6 stroke-[1.5]"></i>
-          <h3 class="text-xl font-bold text-white mb-3">Sistemas de Aquisição de Dados</h3>
-          <p class="text-gray-300 text-sm leading-relaxed">Sistemas de instrumentação projetados para alta taxa de amostragem e conversão A/D de precisão, fundamentais para análise de dados e controle preditivo.</p>
-        </div>
-
-        <!-- Serviço 6 -->
-        <div class="bg-navy-light p-10 rounded-2xl hover:bg-navy-dark transition-all duration-300 shadow-lg hover:-translate-y-2 hover:shadow-2xl border border-transparent hover:border-white/10">
-          <i data-lucide="settings" class="w-8 h-8 text-white mb-6 stroke-[1.5]"></i>
-          <h3 class="text-xl font-bold text-white mb-3">Controle e Automação Industrial</h3>
-          <p class="text-gray-300 text-sm leading-relaxed">Projetos de controle em malha fechada e integração sistêmica, visando a minimização de paradas operacionais e adequação às normas de segurança industrial.</p>
+          <i data-lucide="flask-conical" class="w-8 h-8 text-white mb-6 stroke-[1.5]"></i>
+          <p class="text-blue-cta text-xs font-bold uppercase tracking-widest mb-2">Etapa 06</p>
+          <h3 class="text-xl font-bold text-white mb-3">Prototipagem e Validação</h3>
+          <p class="text-gray-300 text-sm leading-relaxed">Montagem do protótipo, testes funcionais sob as condições reais de uso e ajustes finais. Você recebe o equipamento validado com o pacote completo de documentação técnica.</p>
         </div>
       </div>
     </div>
@@ -264,18 +462,22 @@
   <!-- ESCOPO TÉCNICO E ENTREGÁVEIS -->
   <section class="py-20 px-6 bg-gray-50 border-y border-gray-200">
     <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16">
-      
+
       <!-- Tecnologias -->
       <div>
-        <h2 class="text-3xl font-black text-navy-dark mb-8">Stack Tecnológico</h2>
+        <h2 class="text-3xl font-black text-navy-dark mb-3">Stack Tecnológico</h2>
+        <p class="text-gray-600 font-medium mb-8">Tecnologias que dominamos e aplicamos diretamente no desenvolvimento dos equipamentos.</p>
         <div class="grid grid-cols-2 gap-6">
           <div>
             <h4 class="text-blue-cta font-bold mb-2">Microcontroladores</h4>
-            <ul class="text-sm text-gray-600 space-y-1"><li>Família ESP32</li><li>STM32 (ARM Cortex-M)</li><li>Arquitetura AVR</li><li>Microchip PIC</li></ul>
+            <ul class="text-sm text-gray-600 space-y-1"><li>Família ESP32</li><li>STM32 (ARM Cortex-M)</li><li>Família Raspberry Pi</li></ul>
           </div>
           <div>
-            <h4 class="text-blue-cta font-bold mb-2">Protocolos de Comunicação</h4>
-            <ul class="text-sm text-gray-600 space-y-1"><li>UART / USART</li><li>SPI</li><li>I2C</li><li>Rede CAN</li></ul>
+            <h4 class="text-blue-cta font-bold mb-2">Comunicação</h4>
+            <p class="text-xs font-bold text-navy-dark uppercase tracking-wide mt-2 mb-1">Internet Protocol (IP)</p>
+            <ul class="text-sm text-gray-600 space-y-1"><li>Wi-Fi</li><li>MQTT</li><li>HTTP</li><li>4G</li></ul>
+            <p class="text-xs font-bold text-navy-dark uppercase tracking-wide mt-3 mb-1">No-Internet Protocol (Non-IP)</p>
+            <ul class="text-sm text-gray-600 space-y-1"><li>Bluetooth</li><li>LoRa</li></ul>
           </div>
           <div>
             <h4 class="text-blue-cta font-bold mb-2">Desenvolvimento de Firmware</h4>
@@ -290,7 +492,8 @@
 
       <!-- Entregáveis -->
       <div>
-        <h2 class="text-3xl font-black text-navy-dark mb-8">Pacote de Entregáveis Técnicos</h2>
+        <h2 class="text-3xl font-black text-navy-dark mb-3">Pacote de Entregáveis Técnicos</h2>
+        <p class="text-gray-600 font-medium mb-8">Ao final do projeto, tudo o que foi produzido é seu, sem dependência da nossa equipe para evoluir o produto.</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="flex items-center space-x-3 bg-white p-3 rounded-md border border-gray-200"><i data-lucide="check-circle" class="text-blue-cta w-5 h-5"></i><span class="text-sm font-semibold text-navy-dark">Diagramas Elétricos e Esquemáticos</span></div>
           <div class="flex items-center space-x-3 bg-white p-3 rounded-md border border-gray-200"><i data-lucide="check-circle" class="text-blue-cta w-5 h-5"></i><span class="text-sm font-semibold text-navy-dark">Arquivos Gerber (Projeto PCB)</span></div>
@@ -304,11 +507,11 @@
     </div>
   </section>
 
-  <!-- BANNER CTA (Arredondamento retirado) -->
-  <section class="relative py-32 px-6 bg-cover bg-center overflow-hidden" style="background-image: linear-gradient(rgba(10, 30, 63, 0.85), rgba(10, 30, 63, 0.95)), url('imagem3');">
+  <!-- BANNER CTA -->
+  <section class="relative py-32 px-6 bg-cover bg-center overflow-hidden" style="background-image: linear-gradient(rgba(10, 30, 63, 0.85), rgba(10, 30, 63, 0.95)), url('pexels-djenz-van-eysendeyk-1836927628-28675583.webp');">
     <div class="max-w-4xl mx-auto text-center relative z-10">
-      <h2 class="text-3xl md:text-5xl font-black text-white mb-6 leading-tight">Pronto para escalar seu produto com hardware de engenharia avançada?</h2>
-      <p class="text-lg text-gray-300 mb-10">Agende uma reunião técnica e entenda como nossa metodologia de desenvolvimento garante confiabilidade, manutenibilidade e viabilidade de fabricação para o seu projeto.</p>
+      <h2 class="text-3xl md:text-5xl font-black text-white mb-6 leading-tight">Pronto para tirar o seu equipamento do papel?</h2>
+      <p class="text-lg text-gray-300 mb-10">Agende uma reunião técnica e entenda como nossa metodologia de desenvolvimento garante confiabilidade, manutenibilidade e viabilidade de fabricação para o seu produto.</p>
       <a href="#formulario-final" class="inline-block px-10 py-4 btn-cta rounded-md shadow-xl">
         Agendar Avaliação Técnica
       </a>
@@ -320,71 +523,107 @@
     <div class="max-w-7xl mx-auto">
       <div class="text-center mb-16">
         <h2 class="text-3xl md:text-4xl font-black text-navy-dark mb-4">Validação de Mercado</h2>
-        <p class="text-gray-600 font-medium">Resultados documentados de parceiros corporativos sobre o rigor técnico das entregas da EESC jr.</p>
+        <p class="text-gray-600 font-medium">Avaliações reais de clientes atendidos pelo núcleo de Elétrica e Mecânica da EESC jr.</p>
       </div>
 
-      <div class="grid md:grid-cols-3 gap-8">
-        <!-- Depoimento 1 -->
-        <div class="bg-gray-50 p-8 rounded-xl border border-gray-200 flex flex-col justify-between">
-          <div>
-            <p class="text-blue-cta text-xs font-bold uppercase tracking-wider mb-4">Projetos Industriais</p>
-            <p class="text-navy-dark font-bold text-lg leading-snug mb-4">"A topologia da placa e a documentação fornecida garantiram a escalabilidade do nosso produto no mercado."</p>
-            <div class="flex text-yellow-400 mb-6">
-              <i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i>
+      <div id="depoimentos-carrossel" class="relative">
+
+        <div id="depo-track" class="flex items-stretch justify-center gap-6 lg:gap-8 py-6">
+
+          <!-- Depoimento 1 -->
+          <article class="depo-card">
+            <div>
+              <p class="text-blue-cta text-xs font-bold uppercase tracking-wider mb-4">Termômetros — ESALQ</p>
+              <p class="text-navy-dark font-bold text-lg leading-snug mb-4">"Vocês mostraram comprometimento, souberam lidar com os percalços do caminho e no final entregaram um produto de qualidade. Sempre deram a atenção necessária."</p>
+              <div class="flex text-yellow-400 mb-6">
+                <i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i>
+              </div>
             </div>
-          </div>
-          <div>
-            <p class="font-bold text-navy-dark">— Marcos Almeida</p>
-            <p class="text-sm text-gray-500 mt-2">O rigor na validação do protótipo reduziu substancialmente os custos inerentes à fase de manufatura.</p>
-          </div>
+            <div>
+              <p class="font-bold text-navy-dark">— Arthur Conrado Nunes Santos</p>
+              <p class="text-sm text-gray-500 mt-2">"Um produto muito útil, entregue funcionando da maneira como esperava, exatamente como foi solicitado de início."</p>
+              <p class="text-xs font-bold text-blue-cta mt-4 uppercase tracking-wider">Recomendaria a EESC jr.: 10/10</p>
+            </div>
+          </article>
+
+          <!-- Depoimento 2 -->
+          <article class="depo-card">
+            <div>
+              <p class="text-blue-cta text-xs font-bold uppercase tracking-wider mb-4">Capacete de Bebê</p>
+              <p class="text-navy-dark font-bold text-lg leading-snug mb-4">Transparência com a equipe, engajamento do grupo, sentiu-se ouvida e teve as necessidades atendidas.</p>
+              <div class="flex text-yellow-400 mb-6">
+                <i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i>
+              </div>
+            </div>
+            <div>
+              <p class="font-bold text-navy-dark">— Ana Izabel Izidório Lima</p>
+              <p class="text-sm text-gray-500 mt-2">Destacou a paixão e o interesse da equipe pelo projeto, e a vontade genuína de ajudar.</p>
+              <p class="text-xs font-bold text-blue-cta mt-4 uppercase tracking-wider">Recomendaria a EESC jr.: 10/10</p>
+            </div>
+          </article>
+
+          <!-- Depoimento 3 -->
+          <article class="depo-card">
+            <div>
+              <p class="text-blue-cta text-xs font-bold uppercase tracking-wider mb-4">Cabine de Fotos</p>
+              <p class="text-navy-dark font-bold text-lg leading-snug mb-4">"Satisfação, detalhamento, prontidão, acessibilidade, solicitude."</p>
+              <div class="flex text-yellow-400 mb-6">
+                <i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i>
+              </div>
+            </div>
+            <div>
+              <p class="font-bold text-navy-dark">— Clara Genevicius Pinto Ferraz e Manuel Savoldi Armando</p>
+              <p class="text-sm text-gray-500 mt-2">"Detalhamento e cuidado com a entrega — tratar o projeto com carinho, envolvimento com o projeto."</p>
+              <p class="text-xs font-bold text-blue-cta mt-4 uppercase tracking-wider">Recomendaria a EESC jr.: 10/10</p>
+            </div>
+          </article>
+
+          <!-- Depoimento 4 -->
+          <article class="depo-card">
+            <div>
+              <p class="text-blue-cta text-xs font-bold uppercase tracking-wider mb-4">Vending Machine de Coco Verde</p>
+              <p class="text-navy-dark font-bold text-lg leading-snug mb-4">"Fui muito bem atendido desde o primeiro contato. Projeto super detalhado, equipe focada e dedicada a entregar o melhor resultado, atendendo todos os pedidos de alteração."</p>
+              <div class="flex text-yellow-400 mb-6">
+                <i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i>
+              </div>
+            </div>
+            <div>
+              <p class="font-bold text-navy-dark">— Francesco</p>
+              <p class="text-sm text-gray-500 mt-2">"O CAD 3D me fez entender como será a máquina e as partes dela. O projeto entregou tudo que foi combinado no início e um pouco mais."</p>
+              <p class="text-xs font-bold text-blue-cta mt-4 uppercase tracking-wider">Recomendaria a EESC jr.: 10/10</p>
+            </div>
+          </article>
+
         </div>
 
-        <!-- Depoimento 2 -->
-        <div class="bg-gray-50 p-8 rounded-xl border border-gray-200 flex flex-col justify-between">
-          <div>
-            <p class="text-blue-cta text-xs font-bold uppercase tracking-wider mb-4">Controle de Processos</p>
-            <p class="text-navy-dark font-bold text-lg leading-snug mb-4">"O firmware desenvolvido para nosso maquinário atendeu rigorosamente aos requisitos operacionais de tempo real."</p>
-            <div class="flex text-yellow-400 mb-6">
-              <i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i>
-            </div>
-          </div>
-          <div>
-            <p class="font-bold text-navy-dark">— Carlos Eduardo</p>
-            <p class="text-sm text-gray-500 mt-2">A solução atendeu aos mais altos padrões de condicionamento de sinais e integração de sensoriamento industrial.</p>
-          </div>
+        <!-- Controles -->
+        <div class="flex justify-center items-center gap-5 mt-8">
+          <button id="depo-prev" type="button" aria-label="Depoimento anterior" class="w-11 h-11 rounded-full border border-gray-300 text-navy-dark flex items-center justify-center hover:bg-navy-dark hover:text-white hover:border-navy-dark transition-colors">
+            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+          </button>
+          <div id="depo-dots" class="flex items-center gap-2"></div>
+          <button id="depo-next" type="button" aria-label="Próximo depoimento" class="w-11 h-11 rounded-full border border-gray-300 text-navy-dark flex items-center justify-center hover:bg-navy-dark hover:text-white hover:border-navy-dark transition-colors">
+            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+          </button>
         </div>
 
-        <!-- Depoimento 3 -->
-        <div class="bg-gray-50 p-8 rounded-xl border border-gray-200 flex flex-col justify-between">
-          <div>
-            <p class="text-blue-cta text-xs font-bold uppercase tracking-wider mb-4">Sistemas de Telemetria IoT</p>
-            <p class="text-navy-dark font-bold text-lg leading-snug mb-4">"A expertise da equipe superou nossas métricas esperadas para monitoramento e estabilidade de conexão."</p>
-            <div class="flex text-yellow-400 mb-6">
-              <i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i><i data-lucide="star" class="w-4 h-4 fill-current"></i>
-            </div>
-          </div>
-          <div>
-            <p class="font-bold text-navy-dark">— Maria Zeoti</p>
-            <p class="text-sm text-gray-500 mt-2">A despeito da complexidade dos protocolos de rede, o sistema de aquisição entregue demonstrou alta segurança e eficiência hertziana.</p>
-          </div>
-        </div>
       </div>
     </div>
   </section>
 
-  <!-- 10. FORMULÁRIO FINAL COMPLETO -->
+  <!-- FORMULÁRIO FINAL COMPLETO -->
   <section id="formulario-final" class="relative py-24 px-6 bg-navy-dark pb-32">
     <div class="max-w-6xl mx-auto grid lg:grid-cols-2 gap-16 items-start">
-      
+
       <!-- Texto Lateral -->
       <div class="pt-10">
         <h2 class="text-3xl md:text-4xl font-black text-white mb-6 leading-tight">
           Agende uma reunião de escopo para alinhamento técnico estruturado.
         </h2>
         <p class="text-gray-300 text-lg mb-8">
-          Forneça as especificações preliminares ao lado para que nossa equipe de engenharia conduza uma análise inicial de viabilidade e requisitos.
+          Atendemos empresas em parceria técnica e em desenvolvimento de produto. Descreva as especificações preliminares ao lado para que nossa equipe conduza a análise inicial de viabilidade e requisitos.
         </p>
-        
+
         <div class="hidden lg:block border-t border-white/20 pt-8 mt-12">
           <h4 class="font-bold text-white mb-4">Diferenciais Técnicos EESC jr.</h4>
           <ul class="space-y-3 text-sm text-gray-300">
@@ -398,31 +637,31 @@
       <!-- Formulário Completo -->
       <div class="bg-navy-light p-8 md:p-10 rounded-xl shadow-2xl border border-white/10">
         <h3 class="text-2xl font-bold text-white mb-8 text-center border-b border-white/10 pb-4">Preencha o formulário</h3>
-        <form action="#" method="POST" class="space-y-6">
-          
+        <form id="form-final-embarcados" action="https://lps.eescjr.com.br/confirmacao-contato/" method="POST" class="space-y-6">
+
           <div class="grid grid-cols-1 gap-6">
             <div>
               <label class="form-label-dark">Nome Completo</label>
-              <input type="text" class="form-input-dark" placeholder="Insira seu nome completo" required>
+              <input type="text" name="nome" class="form-input-dark" placeholder="Insira seu nome completo" required>
             </div>
             <div>
               <label class="form-label-dark">E-mail Corporativo</label>
-              <input type="email" class="form-input-dark" placeholder="Insira seu e-mail corporativo" required>
+              <input type="email" name="email" class="form-input-dark" placeholder="Insira seu e-mail corporativo" required>
             </div>
             <div>
               <label class="form-label-dark">WhatsApp</label>
-              <input type="tel" class="form-input-dark" placeholder="(XX) 99999-9999" required>
+              <input type="tel" name="whatsapp" class="form-input-dark" placeholder="(XX) 99999-9999" required>
             </div>
           </div>
 
           <div>
-            <label class="form-label-dark">Escopo Preliminar do Projeto</label>
-            <textarea rows="4" class="form-input-dark" placeholder="Descreva os requisitos técnicos preliminares, funcionalidades desejadas e restrições de hardware/software..."></textarea>
+            <label class="form-label-dark">Como podemos ajudar?</label>
+            <textarea rows="4" name="mensagem" class="form-input-dark" placeholder="Tem algo que queira nos contar sobre seu projeto?"></textarea>
           </div>
 
           <div>
             <label class="flex items-start space-x-3 text-sm text-gray-300 mt-4">
-              <input type="checkbox" required class="mt-1 accent-blue-cta">
+              <input type="checkbox" name="lgpd" required class="mt-1 accent-blue-cta">
               <span>Autorizo o tratamento de dados para confecção de proposta técnica, de acordo com a LGPD.</span>
             </label>
           </div>
@@ -440,35 +679,25 @@
   <footer id="footer-contato" class="bg-navy-light py-16 px-6 text-white border-t border-white/10">
     <div class="max-w-7xl mx-auto">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-        <!-- Logo e descrição -->
+        <!-- Logo -->
         <div class="md:col-span-1">
-          <img src="logoEESC.png" alt="Logo EESC jr." class="h-20 w-auto mb-6 filter brightness-0 invert">
-          <p class="text-sm text-gray-400 leading-relaxed pr-4">
-            Desenvolvimento de sistemas embarcados e soluções em hardware e firmware para o setor industrial e comercial.
-          </p>
+          <img src="logoEESC.png" alt="EESC jr." class="h-32 w-auto">
         </div>
 
-        <!-- Soluções -->
+        <!-- Descrição -->
         <div>
-          <h4 class="font-bold mb-6 text-white">Soluções Técnicas</h4>
-          <ul class="space-y-3 text-sm text-gray-400">
-            <li><a href="#" class="hover:text-white transition">Projeto Eletrônico (Hardware)</a></li>
-            <li><a href="#" class="hover:text-white transition">Firmware Especializado</a></li>
-            <li><a href="#" class="hover:text-white transition">Integração Sistêmica</a></li>
-            <li><a href="#" class="hover:text-white transition">Conectividade IoT</a></li>
-            <li><a href="#" class="hover:text-white transition">Sistemas de Aquisição de Dados</a></li>
-            <li><a href="#" class="hover:text-white transition">Controle e Automação Industrial</a></li>
-          </ul>
+          <p class="text-sm text-gray-400 leading-relaxed pr-4">
+            Soluções de Engenharia e Arquitetura com rigor técnico da Universidade de São Paulo (USP).
+          </p>
         </div>
 
         <!-- Empresa -->
         <div>
           <h4 class="font-bold mb-6 text-white">Institucional</h4>
           <ul class="space-y-3 text-sm text-gray-400">
-            <li><a href="#" class="hover:text-white transition">Sobre a EESC jr.</a></li>
-            <li><a href="#" class="hover:text-white transition">Cases de Sucesso</a></li>
-            <li><a href="#footer-contato" class="hover:text-white transition">Fale Conosco</a></li>
-            <li><a href="#" class="hover:text-white transition">Publicações Técnicas</a></li>
+            <li><a href="https://eescjr.com.br/" target="_blank" rel="noopener" class="hover:text-white transition">Sobre a EESC jr.</a></li>
+            <li><a href="https://eescjr.com.br/cases-de-sucesso/" target="_blank" rel="noopener" class="hover:text-white transition">Cases de Sucesso</a></li>
+            <li><a href="https://eescjr.com.br/blog/" target="_blank" rel="noopener" class="hover:text-white transition">Blog</a></li>
           </ul>
         </div>
 
@@ -478,11 +707,11 @@
           <ul class="space-y-4 text-sm text-gray-400">
             <li class="flex items-center space-x-3">
               <i data-lucide="mail" class="w-4 h-4 text-white"></i>
-              <a href="mailto:contato@eescjr.com" class="hover:text-white transition">contato@eescjr.com</a>
+              <a href="mailto:falecom@eescjr.com.br" class="hover:text-white transition">falecom@eescjr.com.br</a>
             </li>
             <li class="flex items-center space-x-3">
               <i data-lucide="phone" class="w-4 h-4 text-white"></i>
-              <a href="tel:+5516999999999" class="hover:text-white transition">(16) 99999-9999</a>
+              <a href="tel:+5516992303633" class="hover:text-white transition">(16) 99230-3633</a>
             </li>
             <li class="flex items-center space-x-3">
               <i data-lucide="map-pin" class="w-4 h-4 text-white"></i>
@@ -509,14 +738,11 @@
 
   <!-- Botão Flutuante WhatsApp + Balão de fala -->
   <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-    <!-- Balão escondido por padrão -->
     <div id="wa-tooltip" class="wa-tooltip opacity-0 invisible translate-y-2 bg-white text-navy-dark text-sm font-bold py-3 px-5 rounded-xl shadow-2xl mb-3 relative border border-gray-100">
       Tire suas dúvidas aqui
-      <!-- Triângulo apontando para o botão -->
       <div class="absolute -bottom-2 right-6 w-0 h-0 border-l-[8px] border-l-transparent border-t-[10px] border-t-white border-r-[8px] border-r-transparent filter drop-shadow-sm"></div>
     </div>
-    <!-- Botão WA -->
-    <a href="https://wa.me/5516999999999" target="_blank" class="bg-[#25D366] hover:bg-[#128C7E] text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center">
+    <a href="https://wa.me/5516992303633" target="_blank" class="bg-[#25D366] hover:bg-[#128C7E] text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center">
       <i data-lucide="message-circle" class="w-8 h-8"></i>
     </a>
   </div>
@@ -525,20 +751,201 @@
   <script>
     lucide.createIcons();
 
-    // Lógica para mostrar o balão do WhatsApp quando clica em 'Contato' no menu
-    document.getElementById('link-contato').addEventListener('click', function(e) {
+    /* ---------- Contagem crescente + salto nos indicadores ---------- */
+    (function () {
+      const stats = document.querySelectorAll('[data-stat]');
+      if (!stats.length) return;
+
+      const semMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (semMovimento) return;
+
+      function saltar(el) {
+        el.classList.remove('stat-pop');
+        void el.offsetWidth;            // reinicia a animação
+        el.classList.add('stat-pop');
+      }
+
+      function animar(el) {
+        const alvo = parseFloat(el.dataset.countup);
+        const prefixo = el.dataset.prefix || '';
+        const sufixo = el.dataset.suffix || '';
+
+        // Sem data-countup (o "+ 3M"): só o salto, sem contagem.
+        if (isNaN(alvo)) { saltar(el); return; }
+
+        const duracao = 1100;
+        const inicio = performance.now();
+
+        function quadro(agora) {
+          const p = Math.min((agora - inicio) / duracao, 1);
+          const suave = 1 - Math.pow(1 - p, 3); // desacelera no fim
+          el.textContent = prefixo + Math.round(alvo * suave) + sufixo;
+
+          if (p < 1) {
+            requestAnimationFrame(quadro);
+          } else {
+            el.textContent = prefixo + alvo + sufixo;
+            saltar(el);
+          }
+        }
+        requestAnimationFrame(quadro);
+      }
+
+      // Só dispara quando a seção entra na tela, e uma única vez.
+      const observador = new IntersectionObserver(function (entradas) {
+        entradas.forEach(function (entrada) {
+          if (entrada.isIntersecting) {
+            animar(entrada.target);
+            observador.unobserve(entrada.target);
+          }
+        });
+      }, { threshold: 0.6 });
+
+      stats.forEach(function (el) {
+        if (el.dataset.countup) {
+          el.textContent = (el.dataset.prefix || '') + '0' + (el.dataset.suffix || '');
+        }
+        observador.observe(el);
+      });
+    })();
+
+    /* ---------- Slideshow do Hero ----------
+       Técnica: o slide que ENTRA sobe por cima (z-index maior) e faz
+       fade-in de 0 -> 1. O slide que SAI permanece opaco por baixo
+       durante toda a transição e só é apagado depois que o novo já
+       cobriu 100% da tela. Assim não existe nenhum frame com os dois
+       semi-transparentes (que era o que causava o "piscar/travar"),
+       e o zoom (que vive num elemento interno separado) nunca é
+       interrompido pela troca de opacidade.
+    */
+    (function () {
+      const slides = Array.from(document.querySelectorAll('.hero-slide'));
+      if (!slides.length) return;
+
+      const FADE = 2200;      // deve bater com o transition do CSS (ms)
+      const INTERVALO = 8000; // tempo de cada foto na tela (ms)
+
+      const semMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      function zoomOn(slide) {
+        const img = slide.querySelector('.hero-slide__img');
+        img.classList.remove('is-zooming');
+        void img.offsetWidth;            // força reflow -> reinicia a animação
+        img.classList.add('is-zooming');
+      }
+      function zoomOff(slide) {
+        slide.querySelector('.hero-slide__img').classList.remove('is-zooming');
+      }
+
+      // Estado inicial
+      let atual = 0;
+      slides[0].classList.add('is-active');
+      slides[0].style.zIndex = 2;
+      zoomOn(slides[0]);
+
+      if (slides.length < 2 || semMovimento) return;
+
+      // Pré-carrega TODAS as imagens antes de começar a rodar.
+      // Trocar para uma imagem ainda não decodificada é a outra causa
+      // clássica de engasgo na transição.
+      const urls = slides.slice(1).map(function (s) {
+        return s.querySelector('.hero-slide__img').style.backgroundImage.slice(5, -2);
+      });
+
+      Promise.all(urls.map(function (u) {
+        return new Promise(function (resolve) {
+          const im = new Image();
+          im.onload = im.onerror = resolve;
+          im.src = u;
+        });
+      })).then(iniciar);
+
+      function iniciar() {
+        setInterval(function () {
+          if (document.hidden) return; // não anima em aba oculta
+
+          const anterior = slides[atual];
+          atual = (atual + 1) % slides.length;
+          const proximo = slides[atual];
+
+          anterior.style.zIndex = 1;  // fica por baixo, ainda opaco
+          proximo.style.zIndex = 2;   // entra por cima
+          zoomOn(proximo);
+          proximo.classList.add('is-active'); // fade-in
+
+          setTimeout(function () {
+            anterior.classList.remove('is-active'); // já está coberto: sem flicker
+            anterior.style.zIndex = 0;
+            zoomOff(anterior);
+          }, FADE + 100);
+        }, INTERVALO);
+      }
+    })();
+    
+/* ---------- Carrossel de depoimentos (3 visíveis, centro em destaque) ---------- */
+    (function () {
+      const track = document.getElementById('depo-track');
+      if (!track) return;
+
+      const cards = Array.from(track.querySelectorAll('.depo-card'));
+      const total = cards.length;
+      if (!total) return;
+
+      const btnPrev = document.getElementById('depo-prev');
+      const btnNext = document.getElementById('depo-next');
+      const dots = document.getElementById('depo-dots');
+
+      let centro = total > 2 ? 1 : 0;
+
+      cards.forEach(function (_, i) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'w-2.5 h-2.5 rounded-full bg-gray-300 transition-colors';
+        b.setAttribute('aria-label', 'Depoimento ' + (i + 1));
+        b.addEventListener('click', function () { centro = i; render(); });
+        dots.appendChild(b);
+      });
+
+      function render() {
+        const esq = (centro - 1 + total) % total;
+        const dir = (centro + 1) % total;
+
+        cards.forEach(function (c, i) {
+          c.classList.remove('is-visivel', 'is-destaque');
+          c.style.order = '';
+          if (i === esq)    { c.classList.add('is-visivel'); c.style.order = 1; }
+          if (i === centro) { c.classList.add('is-visivel', 'is-destaque'); c.style.order = 2; }
+          if (i === dir)    { c.classList.add('is-visivel'); c.style.order = 3; }
+        });
+
+        Array.from(dots.children).forEach(function (d, i) {
+          d.classList.toggle('bg-blue-cta', i === centro);
+          d.classList.toggle('bg-gray-300', i !== centro);
+        });
+      }
+
+      btnPrev.addEventListener('click', function () { centro = (centro - 1 + total) % total; render(); });
+      btnNext.addEventListener('click', function () { centro = (centro + 1) % total; render(); });
+
+      render();
+    })();
+
+    /* ---------- Balão do WhatsApp ---------- */
+    document.getElementById('link-contato').addEventListener('click', function () {
       const tooltip = document.getElementById('wa-tooltip');
-      
-      // Mostra o balão
+
       tooltip.classList.remove('opacity-0', 'invisible', 'translate-y-2');
       tooltip.classList.add('opacity-100', 'visible', 'translate-y-0');
-      
-      // Esconde o balão automaticamente após 4 segundos
-      setTimeout(() => {
+
+      setTimeout(function () {
         tooltip.classList.remove('opacity-100', 'visible', 'translate-y-0');
         tooltip.classList.add('opacity-0', 'invisible', 'translate-y-2');
       }, 4000);
     });
   </script>
+
+  <!-- Código de Monitoramento RD Station -->
+  <script type="text/javascript" async src="https://d335luupugsy2.cloudfront.net/js/loader-scripts/6b8935d6-2b95-493c-b510-a68b60b5f07e-loader.js"></script>
+
 </body>
 </html>
